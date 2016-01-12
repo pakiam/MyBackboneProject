@@ -1,60 +1,42 @@
-var application_root = __dirname,
-    express = require('express'),
-    bodyParser = require('body-parser'),
-    path = require('path'),
-    mongoose = require('mongoose');
+var application_root = __dirname;
+var express = require('express');
+var path = require('path');
+var mongoose = require('mongoose');
+var bodyParser = require('body-parser');
+var methodOverride = require('method-override');
+var errorhandler = require('errorhandler');
+var formidable=require('formidable');
+var util =require('util');
+var fs=require('fs');
 
-//Create server
 var app = express();
 
-//Connect to database
-mongoose.connect('mongodb://127.0.0.1/library_database');
+app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.json());
+app.use(methodOverride());
+app.use(express.static(path.join(application_root, 'site')));
+app.use(errorhandler({dumpExceptions: true, showStack: true}));
 
-//Schemas
+//mongoDBConnect
+mongoose.connect('mongodb://localhost/library_database');
+//mongo Schemas
+var Keywords = new mongoose.Schema({
+    keyword: String
+});
 var Book = new mongoose.Schema({
+    coverImage: String,
     title: String,
     author: String,
     releaseDate: Date,
     keywords: [Keywords]
 });
-var Keywords=new mongoose.Schema({
-   keyword: String
-});
-//Models
 var BookModel = mongoose.model('Book', Book);
-
-//Configure Server
-app.configure(function () {
-    //parses request body and populates request.body
-    app.use(express.bodyParser());
-    //checks request.body for HTTP method overrides
-    app.use(express.methodOverride());
-    //perform route lookup based on url and HTTP method
-    app.use(app.router);
-    //Where to serve static content
-    app.use(express.static(path.join(application_root, 'site')));
-    //Show all errors in dev
-    app.use(express.errorHandler({dumpExceptions: true, showStack: true}));
-});
-
-//Routes
+//routes here
 app.get('/api', function (request, response) {
-    response.send('Library API is running');
+    response.send('Library API is running.');
 });
-
-//Get a single book by id
-app.get('/api/books/:id', function (request, response) {
-    return BookModel.findById(request.params.id, function (err, book) {
-        if (!err) {
-            return response.send(book);
-        } else {
-            return console.log(err);
-        }
-    });
-});
-
-//Get a list of all books
-app.get('/api/books', function (requset, response) {
+//getting all books
+app.get('/api/books', function (request, response) {
     return BookModel.find(function (err, books) {
         if (!err) {
             return response.send(books);
@@ -63,61 +45,95 @@ app.get('/api/books', function (requset, response) {
         }
     });
 });
+//post photo
+app.post('/api/photos', function (request, response) {
+    var form = new formidable.IncomingForm();
+    form.uploadDir = application_root+ "/site/img";
+    form.keepExtensions = true;
+    form.multiples = true;
+    form.parse(request, function (err, fields, files) {
+        if (err) {
+            response.status(500);
+            response.json({'success': false});
+        } else {
+            response.send({path:files.coverImage.path});
+            //respond.status(200);
+            //console.log(respond.json({'success': true}));
+            console.log(files.coverImage.path);
 
-//Insert a new book
-app.post('/api/books', function (request, respond) {
+            //return ImagePath=files.coverImage.path;
+            //console.log(respond.send(files));
+            //return respond.write(files.coverImage.path);
+        }
+        console.log('SEND');
+    });
+});
+
+//post new book
+app.post('/api/books', function (request, response) {
+    console.log(request.body);
     var book = new BookModel({
+        coverImage: request.body.coverImage,
         title: request.body.title,
         author: request.body.author,
         releaseDate: request.body.releaseDate,
         keywords: request.body.keywords
     });
-    return book.save(function (err) {
+    book.save(function (err) {
         if (!err) {
             console.log('created');
-            return respond.send(book);
+            return response.send(book);
         } else {
-            console.log(err);
+            return console.log(err);
+        }
+    });
+});
+//568ba3368568a8b40cddeee3
+//get book by id
+app.get('/api/books/:id', function (request, response) {
+    return BookModel.findById(request.params.id, function (err, book) {
+        if (!err) {
+            return response.send(book);
+        } else {
+            return console.log(err)
         }
     });
 });
 
-//Update a book
-app.put( '/api/books/:id', function( request, response ) {
-    console.log( 'Updating book ' + request.body.title );
-    return BookModel.findById( request.params.id, function( err, book ) {
+//update book
+app.put('/api/books/:id', function (request, response) {
+    console.log('Updating book ' + request.body.title);
+    return BookModel.findById(request.params.id, function (err, book) {
         book.title = request.body.title;
         book.author = request.body.author;
         book.releaseDate = request.body.releaseDate;
         book.keywords = request.body.keywords;
-
-        return book.save( function( err ) {
-            if( !err ) {
-                console.log( 'book updated' );
+        return book.save(function (err) {
+            if (!err) {
+                console.log('book updated');
             } else {
-                console.log( err );
+                console.log(err);
             }
-            return response.send( book );
-        });
-    });
-});
-//564893eff67258042a000001
-//Delete a book
-app.delete( '/api/books/:id', function( request, response ) {
-    console.log( 'Deleting book with id: ' + request.params.id );
-    return BookModel.findById( request.params.id, function( err, book ) {
-        return book.remove( function( err ) {
-            if( !err ) {
-                console.log( 'Book removed' );
-                return response.send( '' );
-            } else {
-                console.log( err );
-            }
+            return response.send(book);
         });
     });
 });
 
-//Start server
+//delete book
+app.delete('/api/books/:id', function (request, response) {
+    console.log('Deleting book with id: ' + request.params.id);
+    return BookModel.findById(request.params.id, function (err, book) {
+        return book.remove(function (err) {
+            if (!err) {
+                console.log('Book removed');
+                return response.send('');
+            } else {
+                console.log(err);
+            }
+        });
+    });
+});
+
 var port = 3000;
 
 app.listen(port, function () {

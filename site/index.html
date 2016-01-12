@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>MyBackboneProject</title>
+    <title>Front-Ender shelf</title>
     <link rel="stylesheet" href="stylesheets/bootstrap-grid-3.3.1.min.css">
     <link rel="stylesheet" href="stylesheets/jquery-ui.css">
     <link rel="stylesheet" href="stylesheets/jquery-ui.structure.min.css">
@@ -16,15 +16,21 @@
     <div class="container">
         <div class="row">
             <div class="col-md-12">
-                <div id="bookslist">
+                <div class="col-md-2">
+                    <div><img src="" alt="" id="coverImagePreShow"></div>
+                </div>
+                <div class="col-md-10">
                     <div id="books">
-                        <form id="addBook" action="#">
+                        <div id="status"></div>
+                        <form id="addBook" enctype="multipart/form-data" method="post" action="/api/photos" >
                             <div>
-                                <label for="coverImage">CoverImage: </label><input id="coverImage" type="file" />
-                                <label for="title">Title: </label><input id="title" type="text" />
-                                <label for="author">Author: </label><input id="author" type="text" />
-                                <label for="releaseDate">Release date: </label><input id="releaseDate" type="text" />
-                                <label for="keywords">Keywords: </label><input id="keywords" type="text" />
+                                <label for="coverImage">CoverImage: </label>
+                                <input name="coverImage" id="coverImage" type="file"/>
+                                <input id="coverImagePath" type="hidden"/>
+                                <label for="title">Title: </label><input id="title" type="text"/>
+                                <label for="author">Author: </label><input id="author" type="text"/>
+                                <label for="releaseDate">Release date: </label><input id="releaseDate" type="text"/>
+                                <label for="keywords">Keywords: </label><input id="keywords" type="text"/>
                                 <button id="add">Add</button>
                             </div>
                         </form>
@@ -34,29 +40,29 @@
         </div>
         <div class="row">
             <div class="col-md-12">
-
+                <div id="booksList"></div>
             </div>
         </div>
     </div>
 </main>
 
 <footer></footer>
+
 <script id="bookTemplate" type="text/template">
-    <img src="<%= coverImage %>"/>
+    <img src="<%= coverImage %>" alt=""/>
     <ul>
         <li><%= title %></li>
         <li><%= author %></li>
-        <li><%= $.format.date( new Date( releaseDate ), 'MMMM yyyy' ) %></li>
-        <li><% _.each( keywords, function( keyobj ) {%> <%= keyobj.keyword %><% } ); %></li>
+        <li><%= $.dateMonthAndYear(releaseDate) %></li>
+        <li><% _.each( keywords, function( keyobj ) {%>
+            <%= keyobj.keyword %><% } ); %></li>
     </ul>
-
-    <button class="delete">Delete</button>
+    <button id="delete">Delete</button>
 </script>
 
-
 <script src="js/libs/jquery/jquery.js"></script>
-<script src="js/libs/jquery-dateFormat.js"></script>
-<script src="js/libs/jquery-ui.min.js"></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery.form/3.51/jquery.form.js'></script>
+<script src="js/libs/jquery/jquery-ui.min.js"></script>
 <script src="js/libs/underscore/underscore.js"></script>
 <script src="js/libs/backbone/backbone.js"></script>
 
@@ -64,7 +70,6 @@
 <script src="js/collections/library.js"></script>
 <script src="js/views/book.js"></script>
 <script src="js/views/library.js"></script>
-
 <script src="js/app.js"></script>
 </body>
 </html>

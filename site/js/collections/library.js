@@ -1,6 +1,6 @@
-var app = app || {};
+var app=app || {};
 
-app.Library = Backbone.Collection.extend({
+app.Library=Backbone.Collection.extend({
     model: app.Book,
     url: '/api/books'
 });

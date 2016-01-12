@@ -125,6 +125,8 @@ body {
 }
 
 .bookContainer img {
+  width: 80px;
+  max-width: 100%;
   float: left;
   margin: 10px;
 }
@@ -175,6 +177,10 @@ body {
   clear: both;
   font-size: 0;
   line-height: 0;
+}
+
+#coverImagePreShow{
+  max-width: 100%;
 }
 
 /*==========  Desktop First Method  ========== */

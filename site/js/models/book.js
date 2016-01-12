@@ -1,10 +1,10 @@
-var app= app || {};
+var app = app || {};
 
 app.Book=Backbone.Model.extend({
     defaults:{
         coverImage: 'img/placeholder.png',
-        title:'No title',
-        author: 'Unknown',
+        title: 'No title',
+        author: 'No author',
         releaseDate: 'Unknown',
         keywords: 'None'
     },
