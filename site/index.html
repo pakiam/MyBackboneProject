@@ -10,7 +10,26 @@
     <link rel="stylesheet" href="stylesheets/style.css">
 </head>
 <body>
-<header></header>
+<header>
+    <div id="header-login">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-12">
+                    <form id="loginForm" method="post" action="/login" >
+                        <div>
+                            <label for="loginName">Login: </label>
+                            <input name="loginName" id="loginName" type="text" placeholder="Login">
+                            <label for="loginPassword">Password: </label>
+                            <input name="loginPassword" id="loginPassword" type="password" placeholder="Password">
+
+                            <button id="login-button" type="submit">Log In</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
 
 <main>
     <div class="container">

@@ -3,22 +3,41 @@ var express = require('express');
 var path = require('path');
 var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
+var session = require('express-session');
+var MongoStore=require('connect-mongo')(session);
+var async = require('async');
 var methodOverride = require('method-override');
 var errorhandler = require('errorhandler');
-var formidable=require('formidable');
-var util =require('util');
-var fs=require('fs');
+var crypto = require('crypto');
+var formidable = require('formidable');
+var util = require('util');
+var fs = require('fs');
 
 var app = express();
+
+//mongoDBConnect
+mongoose.connect('mongodb://localhost/library_database');
+
+var sessionConfig={
+    secret: "KillerIsJim", // подпись для куков с сессией
+    cookie: {
+        path: "/",
+        maxAge: 14400000, // 4h max inactivity for session
+        httpOnly: true // hide from attackers
+    },
+    key: "sid",
+    // take connection settings from mongoose
+    store: new MongoStore({url: 'mongodb://localhost/library_database'})
+};
 
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 app.use(methodOverride());
 app.use(express.static(path.join(application_root, 'site')));
 app.use(errorhandler({dumpExceptions: true, showStack: true}));
+app.use(session(sessionConfig));
 
-//mongoDBConnect
-mongoose.connect('mongodb://localhost/library_database');
+
 //mongo Schemas
 var Keywords = new mongoose.Schema({
     keyword: String
@@ -31,7 +50,144 @@ var Book = new mongoose.Schema({
     keywords: [Keywords]
 });
 var BookModel = mongoose.model('Book', Book);
+/////////////////////////////////
+function Signer(secret) {
+    this.secret = secret;
+}
+
+Signer.prototype.sign = function(stringOrBuffer) {
+
+    return stringOrBuffer + '.' +
+
+        crypto
+            .createHmac('sha256', this.secret)
+            .update(stringOrBuffer)
+            .digest('base64')
+            .replace(/\=+$/, '');
+};
+
+Signer.prototype.unsign = function(value) {
+    var str = value.slice(0, value.lastIndexOf('.'));
+    return this.sign(str) == value ? str : false;
+};
+////////////////////////////////
+var User = new mongoose.Schema({
+    username: {
+        type: String,
+        unique: true,
+        required: true
+    },
+    hashedPassword: {
+        type: String,
+        required: true
+    },
+    salt: {
+        type: String,
+        required: true
+    },
+    created: {
+        type: Date,
+        default: Date.now
+    }
+});
+
+User.methods.encryptPassword = function (password) {
+    return crypto.createHmac('sha1', this.salt).update(password).digest('hex');
+};
+
+User.virtual('password').set(function (password) {
+        this._plainPassword = password;
+        this.salt = Math.random() + '';
+        this.hashedPassword = this.encryptPassword(password);
+    }).get(function () {
+        return this._plainPassword;
+    });
+
+User.methods.checkPassword = function (password) {
+    return this.encryptPassword(password) === this.hashedPassword;
+};
+
+User.methods.getPublicFields = function () {
+    return {
+        username: this.username,
+        created: this.created,
+        id: this.id
+    };
+};
+
+var UserModel = mongoose.model('User', User);
+
+function restrict(req,res,next){
+    if(req.session.user==='56966103843ed38c16c3c191'){
+        next();
+    }else{
+        console.log(req.session.user);
+        req.session.error='Access denied';
+        res.redirect('/')
+    }
+}
+/*app.use(function(req, res, next){
+    // all the stuff from the example
+    if (req.session.user) {
+        res.locals.user = req.session.user
+    }
+    next();
+});*/
 //routes here
+app.get('/', function (req, res) {
+    console.log('GET request to the homepage');
+});
+
+//login
+app.post('/login', function (req, res, next) {
+    console.log(req.body.loginName);
+    console.log(req.body.loginPassword);
+    console.log(req.body);
+    async.waterfall([
+            function (callback) {
+                UserModel.findOne({username: req.body.loginName}).exec(callback);
+            },
+            function (user, callback) {
+                if (!user) {
+                    user = new UserModel({
+                        username: req.body.loginName,
+                        password: req.body.loginPassword
+                    });
+                    user.save(function (err, user, affected) {
+                        callback(err, user);
+                    });
+                } else {
+                    if (user.checkPassword(req.body.loginPassword)) {
+                        callback(null, user);
+                    } else {
+                        res.status(403).send('Логин или пароль неверен.');
+                    }
+                }
+            }
+        ],
+        function (err, user) {
+            if (err) {
+                return console.log(err);
+            }
+            console.log('User with name: ' + user.username + ' id: '+user.id +' login');
+            req.session.user = user._id;
+            res.locals.session = req.session;
+            res.locals.user = req.user;
+            res.redirect('/');
+
+        });
+
+});
+
+app.get('/logout', function (req, res) {
+    console.log(req.session.user+' logged out');
+    req.session.destroy(function () {
+        res.redirect('/');
+    });
+});
+app.get('/restricted', restrict, function(req, res){
+    res.send(req.session +' Wahoo! restricted area, click to <a href="/logout">logout</a>');
+});
 app.get('/api', function (request, response) {
     response.send('Library API is running.');
 });
@@ -48,7 +204,7 @@ app.get('/api/books', function (request, response) {
 //post photo
 app.post('/api/photos', function (request, response) {
     var form = new formidable.IncomingForm();
-    form.uploadDir = application_root+ "/site/img";
+    form.uploadDir = application_root + "/site/img";
     form.keepExtensions = true;
     form.multiples = true;
     form.parse(request, function (err, fields, files) {
@@ -56,8 +212,7 @@ app.post('/api/photos', function (request, response) {
             response.status(500);
             response.json({'success': false});
         } else {
-            response.send({path:files.coverImage.path});
-            //respond.status(200);
+            response.status(200).send({path: files.coverImage.path});
             //console.log(respond.json({'success': true}));
             console.log(files.coverImage.path);
 
@@ -68,6 +223,7 @@ app.post('/api/photos', function (request, response) {
         console.log('SEND');
     });
 });
+
 
 //post new book
 app.post('/api/books', function (request, response) {

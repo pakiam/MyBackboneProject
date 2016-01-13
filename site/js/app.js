@@ -1,16 +1,39 @@
 var app=app || {};
 
+
 $(function () {
     $('#releaseDate').datepicker();
 
     new app.LibraryView();
 
     $.dateMonthAndYear= function (dateObject) {
+        var monthNames = ["January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
         var d=new Date(dateObject);
-        return d.getMonth() + d.getFullYear();
+        return monthNames[d.getMonth()] +' '+ d.getFullYear();
     };
-
     status('Choose a file :)');
+
+    $('#loginForm').on('submit', function() {
+        var form = $(this);
+
+        $('.error', form).html('');
+        $(":submit", form).button("loading");
+        $.ajax({
+                success: function(response) {
+                    console.log(response);
+                    form.html("Вы вошли в сайт").addClass('alert-success');
+                    window.location.href = "/";
+                },
+                error: function(xhr) {
+                    console.log('Login error: '+xhr.status)
+                }
+
+        });
+        return false;
+    });
+
 
     // Check to see when a user has selected a file
     var timerId;
