@@ -1,0 +1,14 @@
+html
+    head
+        title!=title
+    #header-login
+        .container
+            .row
+                .col-md-12
+                    form(id='loginForm',method='post',action='/login')
+                        div
+                            label(for='loginName') Login:
+                            input(name='loginName', id='loginName',type='text',placeholder='Login')
+                            label(for='loginPassword') Password:
+                            input(name='loginPassword',id='loginPassword',type='password', placeholder='Password')
+                            button(id='login-button', type='submit') Log In

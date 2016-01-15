@@ -29,13 +29,23 @@ var sessionConfig={
     // take connection settings from mongoose
     store: new MongoStore({url: 'mongodb://localhost/library_database'})
 };
-
-app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: false}));
 app.use(methodOverride());
 app.use(express.static(path.join(application_root, 'site')));
 app.use(errorhandler({dumpExceptions: true, showStack: true}));
 app.use(session(sessionConfig));
+
+app.use(function(req, res, next){
+    // all the stuff from the example
+    if (req.session.user==='admin') {
+        res.locals.user = req.session.user
+    }
+    next();
+});
+//view engine setup
+app.set('views', path.join(application_root, 'views'));
+app.set('view engine', 'jade');
 
 
 //mongo Schemas
@@ -118,7 +128,7 @@ User.methods.getPublicFields = function () {
 var UserModel = mongoose.model('User', User);
 
 function restrict(req,res,next){
-    if(req.session.user==='56966103843ed38c16c3c191'){
+    if(req.session.user==='admin'){
         next();
     }else{
         console.log(req.session.user);
@@ -126,19 +136,23 @@ function restrict(req,res,next){
         res.redirect('/')
     }
 }
-/*app.use(function(req, res, next){
-    // all the stuff from the example
-    if (req.session.user) {
-        res.locals.user = req.session.user
-    }
-    next();
-});*/
+
 //routes here
 app.get('/', function (req, res) {
+    res.render('index', { title: 'Front-ender', message: 'Hello there!'});
     console.log('GET request to the homepage');
+    //res.send(req.session.user);
 });
 
+app.get('/user', function (req, res) {
+
+});
 //login
+app.get('/login', function (req, res) {
+   res.render('login');
+    console.log('Get login page');
+});
+
 app.post('/login', function (req, res, next) {
     console.log(req.body.loginName);
     console.log(req.body.loginPassword);
@@ -170,9 +184,9 @@ app.post('/login', function (req, res, next) {
                 return console.log(err);
             }
             console.log('User with name: ' + user.username + ' id: '+user.id +' login');
-            req.session.user = user._id;
-            res.locals.session = req.session;
-            res.locals.user = req.user;
+            req.session.user = user.username;
+            /*res.locals.session = req.session;
+            res.locals.user = req.user;*/
             res.redirect('/');
 
         });
@@ -188,7 +202,7 @@ app.get('/logout', function (req, res) {
 app.get('/restricted', restrict, function(req, res){
     res.send(req.session +' Wahoo! restricted area, click to <a href="/logout">logout</a>');
 });
-app.get('/api', function (request, response) {
+app.get('/api',function (request, response) {
     response.send('Library API is running.');
 });
 //getting all books

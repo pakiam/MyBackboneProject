@@ -1,6 +1,5 @@
 var app=app || {};
 
-
 $(function () {
     $('#releaseDate').datepicker();
 
